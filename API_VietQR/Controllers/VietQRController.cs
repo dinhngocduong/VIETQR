@@ -31,7 +31,23 @@ namespace API_VietQR.Controllers
 			var result = await _vietQRServices.TransactionSync(agentId, request, cancellationToken);
 			return Ok(result);
 		}
-				
+
+
+		[HttpPost]
+		[Route("vietqr/bank/api/transaction-sync")]
+		public async Task<IActionResult> TransactionSyncVietqr(TransactionSyncRequest request, CancellationToken cancellationToken)
+		{
+			var agentIdClaim = HttpContext.User.Claims.FirstOrDefault(x => x.Type.Equals(Constants.AgentIdClaim));
+			if (agentIdClaim == null)
+			{
+				return Forbid();
+			}
+			var agentId = int.Parse(agentIdClaim.Value);
+			var result = await _vietQRServices.TransactionSync(agentId, request, cancellationToken);
+			return Ok(result);
+		}
+
+
 		[HttpPost]
 		[Route("vqr/bank/api/test/transaction-callback")]
 		public async Task<IActionResult> TransactionTest(TransactionTestRequest request, CancellationToken cancellationToken)

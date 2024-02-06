@@ -28,12 +28,20 @@ namespace API_VietQR
 				  .AllowAnyMethod()
 				  .AllowAnyOrigin().WithExposedHeaders("Version", "Time"));
 
-			app.UseWhen(context => context.Request.Path.StartsWithSegments("/api/token_generate") || context.Request.Path.StartsWithSegments("/vqr/api/token_generate"), appBuilder =>
+			app.UseWhen(context => 
+			context.Request.Path.StartsWithSegments("/api/token_generate") || 
+			context.Request.Path.StartsWithSegments("/vqr/api/token_generate") ||
+			context.Request.Path.StartsWithSegments("/vietqr/api/token_generate")
+			, appBuilder =>
 			{
 				appBuilder.UseMiddleware<CheckSessionMiddlewareAuth>();
 			});
 
-			app.UseWhen(context => !(context.Request.Path.StartsWithSegments("/api/token_generate") || context.Request.Path.StartsWithSegments("/vqr/api/token_generate")), appBuilder =>
+			app.UseWhen(context => !(
+			context.Request.Path.StartsWithSegments("/api/token_generate") ||
+			context.Request.Path.StartsWithSegments("/vqr/api/token_generate") ||
+			context.Request.Path.StartsWithSegments("/vietqr/api/token_generate")
+			), appBuilder =>
 			{
 				appBuilder.UseMiddleware<CheckSessionMiddleware>();
 			});

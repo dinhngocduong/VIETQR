@@ -36,6 +36,13 @@ namespace API_VietQR.Controllers
 			var result = await _authServices.Auth(_Username, _Password);
 			return Ok(result);
 		}
+		[HttpPost]
+		[Route("vietqr/api/token_generate")]
+		public async Task<IActionResult> LoginVietqr()
+		{
+			var result = await _authServices.Auth(_Username, _Password);
+			return Ok(result);
+		}
 
 	}
 }
