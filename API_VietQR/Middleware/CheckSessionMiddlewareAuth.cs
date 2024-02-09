@@ -40,7 +40,8 @@ namespace API_VietQR.Middleware
 			}
 			
 			response.StatusCode = (int)HttpStatusCode.OK;
-			await response.WriteAsync(JsonSerializer.Serialize(objUserCheck, Utils.JSON_OPTIONS));
+            response.ContentType = Constants.APPLICATION_JSON;
+            await response.WriteAsync(JsonSerializer.Serialize(objUserCheck, Utils.JSON_OPTIONS));
 			return;
 
 		}

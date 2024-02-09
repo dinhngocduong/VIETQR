@@ -1,8 +1,6 @@
 ﻿using API_VietQR.Services.Auth;
-using API_VietQR.Utilities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
+
 
 namespace API_VietQR.Controllers
 {

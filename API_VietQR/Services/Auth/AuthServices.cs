@@ -39,7 +39,7 @@ namespace API_VietQR.Services.Auth
             });
             if (objUserVietQR == null)
             {
-				return new LoginResponse { Code = Error.ErrorCode.AUTHENTICATE_ERROR, Message = "Agent chưa được cấu hình !" };
+				return new LoginResponse ();
 			}
             List<Claim> claims = new List<Claim>();
 
@@ -55,9 +55,9 @@ namespace API_VietQR.Services.Auth
 			}), _jwtSettings.TokenLifeTime);
 			if (!saveCache)
 			{
-				return new LoginResponse { Code = Error.ErrorCode.AUTHENTICATE_ERROR, Message = "Có lỗi trong quá trình xử lý !!!" };
-			}
-			return new LoginResponse { token_type = "Bearer", access_token = accessToken, expires_in = _jwtSettings.TokenLifeTime.ToString() };
+                return new LoginResponse();
+            }
+			return new LoginResponse { token_type = "Bearer", access_token = accessToken, expires_in = 59 };
         }
     }
 }
