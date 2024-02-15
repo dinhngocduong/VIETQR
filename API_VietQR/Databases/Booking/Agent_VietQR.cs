@@ -11,6 +11,7 @@ namespace API_VietQR.Databases.Booking
 		public string Password { get; set; }
 		public string BankCode { get; set; }
 		public bool Active { get; set; }
+		public decimal Fee { get; set; }
 		public DateTime CreateDate { get; set; }
 	}
 }

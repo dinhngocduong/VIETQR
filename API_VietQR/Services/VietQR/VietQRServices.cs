@@ -46,47 +46,64 @@ namespace API_VietQR.Services.VietQR
             objAgentCallBack.Status = 0;
           
 
-            if (request.content.ToUpper().IndexOf("TOPUP") >=0)
+            if (request.content.ToUpper().IndexOf("TOP UP") >= 0)
             {
                 var array = request.content.ToUpper().Split(' ');
                 if (array.Length > 0)
                 {
-                    var objMemberID = db.QueryFirst<long>("select ID from tbl_ThanhVien where Username=@Username and AgentID=@AgentID", new
+					using var dbBooking = _unitOfWork.ConnectionBooking();
+
+                    var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where AgentID =@AgentID", new
                     {
-                        AgentID = agentId,
-                        Username = "AutoDeposit"
+                        AgentID = agentId
                     });
-                    if (objMemberID  > 0)
+                    if (objAgentVietQR != null)
                     {
-                        var objSubAgent = db.QueryFirst<SubAgents>("select * from tbl_SubAgent where ID=@ID and ParentAgent=@AgentID",
-                        new { AgentID = agentId, ID = array[0] });
-                        if (objSubAgent != null)
-                        {
-                            var DocType = "T";
-                            var objDocNo = db.QueryFirstOrDefault<string>("Select [dbo].[GET_DOC_NO](@DocType,@AgentID,@SubAgentID)",
-                                new { DocType = DocType, AgentID = agentId, SubAgentID = objSubAgent.ID });
-                            if (!String.IsNullOrEmpty(objDocNo))
-                            {
-                                CN_NhatKys objNhatKy = new CN_NhatKys();
-                                objNhatKy.AgentID = agentId;
-                                objNhatKy.Amount_NT = request.amount;
-                                objNhatKy.Amount_VND = request.amount;
-                                objNhatKy.Doc_Date = DateTime.Now;
-                                objNhatKy.Doc_No = objDocNo;
-                                objNhatKy.Doc_Type = DocType;
-                                objNhatKy.Doc_Title = objDocNo;
-                                objNhatKy.MemberID = objMemberID;
-                                objNhatKy.ROE = 1;
-                                objNhatKy.SubAgent = objSubAgent.ID;
-                                objNhatKy.OtherFee = 0;
-                                objNhatKy.AccType = "";
-                                db.Insert<CN_NhatKys>(objNhatKy);
-                                objAgentCallBack.Status = 1;
+						var objThanhVien = dbBooking.QueryFirst<ThanhViens>("select ID from tbl_ThanhVien where Username=@Username and AgentID=@AgentID", new
+						{
+							AgentID = agentId,
+							Username = "AutoDeposit"
+						});
 
-                            }
+						if (objThanhVien.ID > 0)
+						{
+							var objSubAgent = dbBooking.QueryFirst<SubAgents>("select * from tbl_SubAgent where ID=@ID and ParentAgent=@AgentID",
+							new { AgentID = agentId, ID = array[0] });
+							if (objSubAgent != null)
+							{
+								var DocType = "T";
+								var objDocNo = dbBooking.QueryFirstOrDefault<string>("Select [dbo].[GET_DOC_NO](@DocType,@AgentID,@SubAgentID)",
+									new { DocType = DocType, AgentID = agentId, SubAgentID = objSubAgent.ID });
+								if (!String.IsNullOrEmpty(objDocNo))
+								{
+									decimal Fee = 0;
+									if (request.amount < 10000000)
+									{
+										Fee = objAgentVietQR.Fee;
+									}
+									CN_NhatKys objNhatKy = new CN_NhatKys();
+									objNhatKy.AgentID = agentId;
+									objNhatKy.Amount_NT = request.amount - Fee;
+									objNhatKy.Amount_VND = request.amount - Fee;
+									objNhatKy.Doc_Date = DateTime.Now;
+									objNhatKy.Doc_No = objDocNo;
+									objNhatKy.Doc_Type = DocType;
+									objNhatKy.Doc_Title = objDocNo;
+									objNhatKy.MemberID = objThanhVien.ID;
+									objNhatKy.ROE = 1;
+									objNhatKy.SubAgent = objSubAgent.ID;
+									objNhatKy.OtherFee = 0;
+									objNhatKy.AccType = "VN-BL-VJ";
+									dbBooking.Insert<CN_NhatKys>(objNhatKy);
+									objAgentCallBack.Status = 1;
 
-                        }
-                    }
+								}
+
+							}
+						}
+					}
+
+					
                     
                 }
                 
