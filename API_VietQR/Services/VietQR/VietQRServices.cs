@@ -3,6 +3,7 @@ using API_VietQR.Databases.MUADI_LOG;
 using API_VietQR.Databases.UnitOfWork;
 using API_VietQR.Request;
 using API_VietQR.Response;
+using API_VietQR.Utilities;
 using Dapper;
 using Dapper.Contrib.Extensions;
 using Newtonsoft.Json;
@@ -46,7 +47,7 @@ namespace API_VietQR.Services.VietQR
             objAgentCallBack.Status = 0;
           
 
-            if (request.content.ToUpper().IndexOf("TOP UP") >= 0)
+            if (request.content.ToUpper().IndexOf("TOP UP") >= 0 || request.content.ToUpper().IndexOf("TOPUP") >= 0)
             {
                 var array = request.content.ToUpper().Split(' ');
                 if (array.Length > 0)
@@ -67,8 +68,21 @@ namespace API_VietQR.Services.VietQR
 
 						if (objThanhVien.ID > 0)
 						{
-							var objSubAgent = dbBooking.QueryFirst<SubAgents>("select * from tbl_SubAgent where ID=@ID and ParentAgent=@AgentID",
-							new { AgentID = agentId, ID = array[0] });
+							long SubAgentID = 0;
+							var SubAgentCode = String.Empty;
+							string sSQL = "";
+							if (Utilities.ValidationUtility.IsNumeric(array[0]))
+							{
+								SubAgentID = Convert.ToInt64(array[0]);
+								sSQL = "select * from tbl_SubAgent where ID=@ID and ParentAgent=@AgentID";
+							}
+							else
+							{
+								SubAgentCode = array[1];
+								sSQL = "select * from tbl_SubAgent where AgentCode=@SubAgentCode and ParentAgent=@AgentID";
+							}	
+							var objSubAgent = dbBooking.QueryFirst<SubAgents>(sSQL,
+							new { AgentID = agentId, ID = SubAgentID, SubAgentCode  = SubAgentCode });
 							if (objSubAgent != null)
 							{
 								var DocType = "T";
