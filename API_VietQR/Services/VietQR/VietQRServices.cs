@@ -49,11 +49,16 @@ namespace API_VietQR.Services.VietQR
 
             if (request.content.ToUpper().IndexOf("TOP UP") >= 0 || request.content.ToUpper().IndexOf("TOPUP") >= 0)
             {
-                var array = request.content.ToUpper().Split(' ');
-                if (array.Length > 0)
-                {
-					using var dbBooking = _unitOfWork.ConnectionBooking();
+				var dataContent = request.content.ToUpper().Replace("TOP UP","!").Split('!')[0];
+				if (dataContent.IndexOf(".") >=0)
+				{					
+					dataContent = dataContent.Substring(dataContent.LastIndexOf(".")+1);
+				}
 
+				var array = dataContent.Split(' ');
+                if (array.Length >=2)
+                {					
+					using var dbBooking = _unitOfWork.ConnectionBooking();
                     var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where AgentID =@AgentID", new
                     {
                         AgentID = agentId
