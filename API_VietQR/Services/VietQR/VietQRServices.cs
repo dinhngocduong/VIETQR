@@ -71,12 +71,17 @@ namespace API_VietQR.Services.VietQR
 						var dataContent = request.content.ToUpper();
 						if (dataContent.IndexOf("ENDTOPUP") >=0)
 						{
-							var TmpSubAgentID = Utils.SplitSubString("TOPUP", "ENDTOPUP", dataContent);
-							if (Utilities.ValidationUtility.IsNumeric(TmpSubAgentID))
+							var TmpSubAgent = Utils.SplitSubString("TOPUP", "ENDTOPUP", dataContent).Trim().TrimStart().TrimEnd();
+							var array = TmpSubAgent.Split(' ');
+							if (array.Length >= 1)
 							{
-								SubAgentID = Convert.ToInt64(TmpSubAgentID);
-								sSQL = "select * from tbl_SubAgent where ID=@ID and ParentAgent=@AgentID";
-							}
+								var TmpSubAgentID = array[0];
+								if (Utilities.ValidationUtility.IsNumeric(TmpSubAgentID))
+								{
+									SubAgentID = Convert.ToInt64(TmpSubAgentID);
+									sSQL = "select * from tbl_SubAgent where ID=@ID and ParentAgent=@AgentID";
+								}
+							}							
 						}
 						else
 						{
@@ -105,33 +110,38 @@ namespace API_VietQR.Services.VietQR
 						new { AgentID = agentId, ID = SubAgentID, SubAgentCode = SubAgentCode });
 						if (objSubAgent != null)
 						{
-							var DocType = "T";
-							var objDocNo = dbBooking.QueryFirstOrDefault<string>("Select [dbo].[GET_DOC_NO](@DocType,@AgentID,@SubAgentID)",
-								new { DocType = DocType, AgentID = agentId, SubAgentID = objSubAgent.ID });
-							if (!String.IsNullOrEmpty(objDocNo))
+							var objAgentCallBackCheck = db.QueryFirstOrDefault<Agent_VietQR_CallBack>("select * from tbl_Agent_VietQR_CallBack where ReferenceNumber=@ReferenceNumber", new { ReferenceNumber = objAgentCallBack.ReferenceNumber });
+							if (objAgentCallBackCheck == null)
 							{
-								decimal Fee = 0;
-								if (request.amount < 10000000)
+								var DocType = "T";
+								var objDocNo = dbBooking.QueryFirstOrDefault<string>("Select [dbo].[GET_DOC_NO](@DocType,@AgentID,@SubAgentID)",
+									new { DocType = DocType, AgentID = agentId, SubAgentID = objSubAgent.ID });
+								if (!String.IsNullOrEmpty(objDocNo))
 								{
-									Fee = objAgentVietQR.Fee;
-								}
-								CN_NhatKys objNhatKy = new CN_NhatKys();
-								objNhatKy.AgentID = agentId;
-								objNhatKy.Amount_NT = request.amount - Fee;
-								objNhatKy.Amount_VND = request.amount - Fee;
-								objNhatKy.Doc_Date = DateTime.Now;
-								objNhatKy.Doc_No = objDocNo;
-								objNhatKy.Doc_Type = DocType;
-								objNhatKy.Doc_Title = objDocNo;
-								objNhatKy.MemberID = objThanhVien.ID;
-								objNhatKy.ROE = 1;
-								objNhatKy.SubAgent = objSubAgent.ID;
-								objNhatKy.OtherFee = 0;
-								objNhatKy.AccType = "VN-BL-VJ";
-								dbBooking.Insert<CN_NhatKys>(objNhatKy);
-								objAgentCallBack.Status = 1;
+									decimal Fee = 0;
+									if (request.amount < 10000000)
+									{
+										Fee = objAgentVietQR.Fee;
+									}
+									CN_NhatKys objNhatKy = new CN_NhatKys();
+									objNhatKy.AgentID = agentId;
+									objNhatKy.Amount_NT = request.amount - Fee;
+									objNhatKy.Amount_VND = request.amount - Fee;
+									objNhatKy.Doc_Date = DateTime.Now;
+									objNhatKy.Doc_No = objDocNo;
+									objNhatKy.Doc_Type = DocType;
+									objNhatKy.Doc_Title = objDocNo;
+									objNhatKy.MemberID = objThanhVien.ID;
+									objNhatKy.ROE = 1;
+									objNhatKy.SubAgent = objSubAgent.ID;
+									objNhatKy.OtherFee = 0;
+									objNhatKy.AccType = "VN-BL-VJ";
+									dbBooking.Insert<CN_NhatKys>(objNhatKy);
+									objAgentCallBack.Status = 1;
 
+								}
 							}
+							
 
 						}
 						
