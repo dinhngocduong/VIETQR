@@ -70,6 +70,7 @@ namespace API_VietQR.Services.VietQR
 					{
 						string sSQL = "";
 						var dataContent = request.content.ToUpper();
+						dataContent = dataContent.Replace("MB 2022888666", "");
 						if (dataContent.IndexOf("ENDTOPUP") >=0)
 						{
 							var TmpSubAgent = Utils.SplitSubString("TOPUP", "ENDTOPUP", dataContent).Trim().TrimStart().TrimEnd();
