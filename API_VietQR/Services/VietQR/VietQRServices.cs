@@ -14,7 +14,6 @@ namespace API_VietQR.Services.VietQR
     public interface IVietQRServices
     {
         Task<TransactionSyncReponse> TransactionSync(int agentId, TransactionSyncRequest request, CancellationToken cancellationToken);
-
         Task<TransactionCallbackTest> TransactionTest(int agentId, TransactionTestRequest request, CancellationToken cancellationToken);
 
 	}
@@ -26,12 +25,7 @@ namespace API_VietQR.Services.VietQR
 			_unitOfWork = unitOfWork;
 		}
         public async Task<TransactionSyncReponse> TransactionSync(int agentId, TransactionSyncRequest request, CancellationToken cancellationToken)
-        {
-			//string fullPath = AppDomain.CurrentDomain.BaseDirectory + "/LogRequest/Tran_" + Guid.NewGuid() + ".txt";
-			//using (StreamWriter writer = new StreamWriter(fullPath))
-			//{
-			//	//writer.WriteLine(JsonConvert.SerializeObject(request));
-			//}
+        {		
 			using var db = _unitOfWork.Connection_LOG();
             Agent_VietQR_CallBack objAgentCallBack = new Agent_VietQR_CallBack();
             objAgentCallBack.AgentID = agentId;
@@ -70,7 +64,7 @@ namespace API_VietQR.Services.VietQR
 					{
 						string sSQL = "";
 						var dataContent = request.content.ToUpper();
-						dataContent = dataContent.Replace("MB 2022888666", "");
+						dataContent = dataContent.Replace("MB "+ request.bankaccount, "");
 						if (dataContent.IndexOf("ENDTOPUP") >=0)
 						{
 							var TmpSubAgent = Utils.SplitSubString("TOPUP", "ENDTOPUP", dataContent).Trim().TrimStart().TrimEnd();
