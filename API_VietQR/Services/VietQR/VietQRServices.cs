@@ -47,6 +47,7 @@ namespace API_VietQR.Services.VietQR
 				
 				long SubAgentID = 0;
 				var SubAgentCode = "";
+				decimal TotalAmountUseFee = 0;
 
 				using var dbBooking = _unitOfWork.ConnectionBooking();
 				var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where BankAccount =@BankAccount", new
@@ -55,6 +56,7 @@ namespace API_VietQR.Services.VietQR
 				});
 				if (objAgentVietQR != null)
 				{
+					TotalAmountUseFee = objAgentVietQR.AmountUseFee;
 					agentId = Convert.ToInt32(objAgentVietQR.AgentID);
 					var objThanhVien = dbBooking.QueryFirstOrDefault<ThanhViens>("select ID from tbl_ThanhVien where Username=@Username and AgentID=@AgentID", new
 					{
@@ -139,7 +141,7 @@ namespace API_VietQR.Services.VietQR
 									if (!String.IsNullOrEmpty(objDocNo))
 									{
 										decimal Fee = 0;
-										if (request.amount < 10000000)
+										if (request.amount < TotalAmountUseFee)
 										{
 											Fee = objAgentVietQR.Fee;
 										}

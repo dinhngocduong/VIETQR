@@ -13,6 +13,7 @@ namespace API_VietQR.Databases.Booking
 		public string BankAccount { get; set; }
 		public bool Active { get; set; }
 		public decimal Fee { get; set; }
+		public decimal AmountUseFee { get; set; }
 		public DateTime CreateDate { get; set; }
 	}
 }
