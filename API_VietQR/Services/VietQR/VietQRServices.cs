@@ -49,12 +49,13 @@ namespace API_VietQR.Services.VietQR
 				var SubAgentCode = "";
 
 				using var dbBooking = _unitOfWork.ConnectionBooking();
-				var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where AgentID =@AgentID", new
+				var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where BankAccount =@BankAccount", new
 				{
-					AgentID = agentId
+					BankAccount = request.bankaccount
 				});
 				if (objAgentVietQR != null)
 				{
+					agentId = Convert.ToInt32(objAgentVietQR.AgentID);
 					var objThanhVien = dbBooking.QueryFirstOrDefault<ThanhViens>("select ID from tbl_ThanhVien where Username=@Username and AgentID=@AgentID", new
 					{
 						AgentID = agentId,
