@@ -7,7 +7,9 @@ using API_VietQR.Utilities;
 using Dapper;
 using Dapper.Contrib.Extensions;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Pipelines.Sockets.Unofficial.Arenas;
+using System.IO;
 
 namespace API_VietQR.Services.VietQR
 {
@@ -20,9 +22,15 @@ namespace API_VietQR.Services.VietQR
     public class VietQRServices : IVietQRServices
     {
         private readonly IUnitOfWork _unitOfWork;
-        public VietQRServices(IUnitOfWork unitOfWork)
+		private readonly IServiceHelper _serviceHelper;
+		private readonly IConfiguration _configuration;
+		private readonly string URL_PAYMENT_CALLBACK = "";
+        public VietQRServices(IUnitOfWork unitOfWork, IServiceHelper serviceHelper, IConfiguration configuration)
         {
 			_unitOfWork = unitOfWork;
+			_serviceHelper = serviceHelper;
+			_configuration = configuration;
+			URL_PAYMENT_CALLBACK = _configuration.GetValue<string>("URL_PAYMENT_CALLBACK");
 		}
         public async Task<TransactionSyncReponse> TransactionSync(int agentId, TransactionSyncRequest request, CancellationToken cancellationToken)
         {		
@@ -43,12 +51,10 @@ namespace API_VietQR.Services.VietQR
           
 
             if (request.content.ToUpper().IndexOf("TOP UP") >= 0 || request.content.ToUpper().IndexOf("TOPUP") >= 0)
-            {
-				
+            {				
 				long SubAgentID = 0;
 				var SubAgentCode = "";
 				decimal TotalAmountUseFee = 0;
-
 				using var dbBooking = _unitOfWork.ConnectionBooking();
 				var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where BankAccount =@BankAccount", new
 				{
@@ -172,11 +178,43 @@ namespace API_VietQR.Services.VietQR
 					}	
 					
 				}	
-
-					
-                
             }
-            db.Insert<Agent_VietQR_CallBack>(objAgentCallBack);
+			else
+			{
+				#region Process Pay B2C
+				using var dbBooking = _unitOfWork.ConnectionBooking();
+				var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where BankAccount =@BankAccount", new
+				{
+					BankAccount = request.bankaccount
+				});
+				if (objAgentVietQR != null)
+				{
+					agentId = Convert.ToInt32(objAgentVietQR.AgentID);
+				}	
+				var payCode = request.content.ToUpper();
+				var objPayment = db.QueryFirstOrDefault<Agent_Payment_B2C>("select * from tbl_Agent_Payment_B2C where PayCode = @PayCode and AgentID=@AgentID", new
+				{
+					PayCode = payCode,
+					AgentID = agentId
+				});
+				if (objPayment != null && objPayment.PayStatus_R != "PAID")
+				{
+					objPayment.PayStatus_R = "PAID";
+					objPayment.PayCreateDate_R = DateTime.Now;
+					objPayment.PayTotal_R = request.amount;
+					objPayment.PayTransaction_R = request.transactionid;
+					db.Update(objPayment);
+
+					var listHeader = new List<HeaderAPIRequest>();
+					listHeader.Add(new HeaderAPIRequest { Key = "AgentID", Value = agentId.ToString() });
+					listHeader.Add(new HeaderAPIRequest { Key = "MemberID", Value = objPayment.MemberID.ToString() });
+					var url = $"{URL_PAYMENT_CALLBACK}/embedded/{objPayment.ID.ToString()}";
+					_ =	Task.Run( () => _serviceHelper.SendToOtherService(HttpMethod.Get, url, "application/json", "", listHeader, cancellationToken));
+				}
+				
+				#endregion
+			}
+			db.Insert<Agent_VietQR_CallBack>(objAgentCallBack);
 
             TransactionSyncReponse objResult = new TransactionSyncReponse();
             objResult.error = false;
