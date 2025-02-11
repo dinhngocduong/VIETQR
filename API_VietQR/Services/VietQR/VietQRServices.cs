@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Pipelines.Sockets.Unofficial.Arenas;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace API_VietQR.Services.VietQR
 {
@@ -182,35 +183,66 @@ namespace API_VietQR.Services.VietQR
 			else
 			{
 				#region Process Pay B2C
-				using var dbBooking = _unitOfWork.ConnectionBooking();
-				var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where BankAccount =@BankAccount", new
-				{
-					BankAccount = request.bankaccount
-				});
-				if (objAgentVietQR != null)
-				{
-					agentId = Convert.ToInt32(objAgentVietQR.AgentID);
-				}	
 				var payCode = request.content.ToUpper();
-				var objPayment = db.QueryFirstOrDefault<Agent_Payment_B2C>("select * from tbl_Agent_Payment_B2C where PayCode = @PayCode and AgentID=@AgentID", new
+				if (!String.IsNullOrEmpty(payCode))
 				{
-					PayCode = payCode,
-					AgentID = agentId
-				});
-				if (objPayment != null && objPayment.PayStatus_R != "PAID")
-				{
-					objPayment.PayStatus_R = "PAID";
-					objPayment.PayCreateDate_R = DateTime.Now;
-					objPayment.PayTotal_R = request.amount;
-					objPayment.PayTransaction_R = request.transactionid;
-					db.Update(objPayment);
+					using var dbBooking = _unitOfWork.ConnectionBooking();
+					var objAgentVietQR = dbBooking.QueryFirstOrDefault<Agent_VietQR>("select * from tbl_Agent_VietQR where BankAccount =@BankAccount", new
+					{
+						BankAccount = request.bankaccount
+					});
+					if (objAgentVietQR != null)
+					{
+						agentId = Convert.ToInt32(objAgentVietQR.AgentID);
+					}
 
-					var listHeader = new List<HeaderAPIRequest>();
-					listHeader.Add(new HeaderAPIRequest { Key = "AgentID", Value = agentId.ToString() });
-					listHeader.Add(new HeaderAPIRequest { Key = "MemberID", Value = objPayment.MemberID.ToString() });
-					var url = $"{URL_PAYMENT_CALLBACK}/embedded/{objPayment.ID.ToString()}";
-					_ =	Task.Run( () => _serviceHelper.SendToOtherService(HttpMethod.Get, url, "application/json", "", listHeader, cancellationToken));
+					var objAgent = dbBooking.QueryFirstOrDefault<Agents>("select * from tbl_Agent where ID=@ID", new
+					{
+						ID = agentId
+					});
+
+					var agentCode = "";
+					if (objAgent != null)
+					{
+						agentCode = objAgent.AgentCode;
+					}
+
+					if (!String.IsNullOrEmpty(agentCode))
+					{
+
+						string pattern = agentCode.ToUpper().Trim()+@"\d{10}";
+						MatchCollection matches = Regex.Matches(payCode, pattern);
+
+						foreach (Match match in matches)
+						{
+							var tmpPayCode = match.Value;
+							var objPayment = dbBooking.QueryFirstOrDefault<Agent_Payment_B2C>("select * from tbl_Agent_Payment_B2C where PayCode = @PayCode and AgentID=@AgentID", new
+							{
+								PayCode = tmpPayCode,
+								AgentID = agentId
+							});
+							if (objPayment != null && objPayment.PayStatus_R != "PAID")
+							{
+								objPayment.PayStatus_R = "PAID";
+								objPayment.PayCreateDate_R = DateTime.Now;
+								objPayment.PayTotal_R = request.amount;
+								objPayment.PayTransaction_R = request.transactionid;
+								dbBooking.Update(objPayment);
+
+								var listHeader = new List<HeaderAPIRequest>();
+								listHeader.Add(new HeaderAPIRequest { Key = "AgentID", Value = agentId.ToString() });
+								listHeader.Add(new HeaderAPIRequest { Key = "MemberID", Value = objPayment.MemberID.ToString() });
+								var url = $"{URL_PAYMENT_CALLBACK}/embedded/payment-callback?paymentId={objPayment.ID.ToString()}";
+								var result = await _serviceHelper.SendToOtherService(HttpMethod.Get, url, "application/json", "", listHeader, cancellationToken);
+								//_ = Task.Run(() => _serviceHelper.SendToOtherService(HttpMethod.Get, url, "application/json", "", listHeader, cancellationToken));
+							}
+						}
+						
+					}
+
+					
 				}
+				
 				
 				#endregion
 			}
