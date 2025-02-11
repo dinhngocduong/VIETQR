@@ -65,6 +65,7 @@ namespace API_VietQR.Services.VietQR
 				{
 					TotalAmountUseFee = objAgentVietQR.AmountUseFee;
 					agentId = Convert.ToInt32(objAgentVietQR.AgentID);
+
 					var objThanhVien = dbBooking.QueryFirstOrDefault<ThanhViens>("select ID from tbl_ThanhVien where Username=@Username and AgentID=@AgentID", new
 					{
 						AgentID = agentId,
@@ -135,10 +136,19 @@ namespace API_VietQR.Services.VietQR
 						
 						if (!String.IsNullOrEmpty(sSQL))
 						{
-							var objSubAgent = dbBooking.QueryFirstOrDefault<SubAgents>(sSQL,
-						new { AgentID = agentId, ID = SubAgentID, SubAgentCode = SubAgentCode });
+							var objSubAgent = dbBooking.QueryFirstOrDefault<SubAgents>(sSQL,new { AgentID = agentId, ID = SubAgentID, SubAgentCode = SubAgentCode });							
 							if (objSubAgent != null)
 							{
+								if (objSubAgent.ParentAgent == 453 && (objSubAgent.Deleted == true || objSubAgent.Active == false))
+								{
+									agentId = 631;
+									objThanhVien = dbBooking.QueryFirstOrDefault<ThanhViens>("select ID from tbl_ThanhVien where Username=@Username and AgentID=@AgentID", new
+									{
+										AgentID = agentId,
+										Username = "AutoDeposit"
+									});
+									objSubAgent = dbBooking.QueryFirstOrDefault<SubAgents>(sSQL, new { AgentID = agentId, ID = SubAgentID, SubAgentCode = SubAgentCode });
+								}
 								var objAgentCallBackCheck = db.QueryFirstOrDefault<Agent_VietQR_CallBack>("select * from tbl_Agent_VietQR_CallBack where ReferenceNumber=@ReferenceNumber", new { ReferenceNumber = objAgentCallBack.ReferenceNumber });
 								if (objAgentCallBackCheck == null)
 								{
