@@ -219,8 +219,7 @@ namespace API_VietQR.Services.VietQR
 
 					if (!String.IsNullOrEmpty(agentCode))
 					{
-
-						string pattern = agentCode.ToUpper().Trim()+@"\d{10}";
+						string pattern = $@"\b({agentCode})\S*";						
 						MatchCollection matches = Regex.Matches(payCode, pattern);
 
 						foreach (Match match in matches)
