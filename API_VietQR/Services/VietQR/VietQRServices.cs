@@ -120,10 +120,11 @@ namespace API_VietQR.Services.VietQR
 							}
 							var array = dataContent.Split(' ');
 							if (array.Length >= 2)
-							{
+							{								
 								if (Utilities.ValidationUtility.IsNumeric(array[0]))
 								{
 									SubAgentID = Convert.ToInt64(array[0]);
+									SubAgentCode = array[1];
 									sSQL = "select * from tbl_SubAgent where ID=@ID and ParentAgent=@AgentID";
 								}
 								else
@@ -155,7 +156,7 @@ namespace API_VietQR.Services.VietQR
 									tmpAgentId = 453;
 									objSubAgent = dbBooking.QueryFirstOrDefault<SubAgents>(sSQL, new { AgentID = tmpAgentId, ID = SubAgentID, SubAgentCode = SubAgentCode });
 								}
-								if ((objSubAgent.Deleted == true || objSubAgent.Active == false))
+								if (objSubAgent != null && (objSubAgent.Deleted == false && objSubAgent.Active == true))
 								{
 									var objAgentCallBackCheck = db.QueryFirstOrDefault<Agent_VietQR_CallBack>("select * from tbl_Agent_VietQR_CallBack where ReferenceNumber=@ReferenceNumber", new { ReferenceNumber = objAgentCallBack.ReferenceNumber });
 									if (objAgentCallBackCheck == null)
