@@ -9,7 +9,9 @@ using Dapper.Contrib.Extensions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Pipelines.Sockets.Unofficial.Arenas;
+using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace API_VietQR.Services.VietQR
@@ -269,17 +271,15 @@ namespace API_VietQR.Services.VietQR
 
 					if (!String.IsNullOrEmpty(agentCode))
 					{
-						string pattern = $@"\b({agentCode})\S*";						
-						MatchCollection matches = Regex.Matches(payCode, pattern);
-
-						foreach (Match match in matches)
+						var parts = payCode.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+						if (parts.Length == 2 && parts[0].StartsWith(agentCode))
 						{
-							var tmpPayCode = match.Value;
-							var objPayment = dbBooking.QueryFirstOrDefault<Agent_Payment_B2C>("select * from tbl_Agent_Payment_B2C where PayCode = @PayCode and AgentID=@AgentID", new
-							{
-								PayCode = tmpPayCode,
-								AgentID = agentId
-							});
+							string tmpPayCode = parts[1];
+
+							var objPayment = dbBooking.QueryFirstOrDefault<Agent_Payment_B2C>(
+								"select * from tbl_Agent_Payment_B2C where PayCode = @PayCode and AgentID = @AgentID",
+								new { PayCode = tmpPayCode, AgentID = agentId });
+
 							if (objPayment != null && objPayment.PayStatus_R != "PAID")
 							{
 								objPayment.PayStatus_R = "PAID";
@@ -288,18 +288,29 @@ namespace API_VietQR.Services.VietQR
 								objPayment.PayTransaction_R = request.transactionid;
 								dbBooking.Update(objPayment);
 
-								var listHeader = new List<HeaderAPIRequest>();
-								listHeader.Add(new HeaderAPIRequest { Key = "AgentID", Value = agentId.ToString() });
-								listHeader.Add(new HeaderAPIRequest { Key = "MemberID", Value = objPayment.MemberID.ToString() });
-								var url = $"{URL_PAYMENT_CALLBACK}/embedded/payment-callback?paymentId={objPayment.ID.ToString()}";
+								var listHeader = new List<HeaderAPIRequest>
+								{
+									new HeaderAPIRequest { Key = "AgentID", Value = agentId.ToString() },
+									new HeaderAPIRequest { Key = "MemberID", Value = objPayment.MemberID.ToString() }
+								};
+
+								var url = $"{URL_PAYMENT_CALLBACK}/embedded/payment-callback?paymentId={objPayment.ID}";
 								var result = await _serviceHelper.SendToOtherService(HttpMethod.Get, url, "application/json", "", listHeader, cancellationToken);
-								//_ = Task.Run(() => _serviceHelper.SendToOtherService(HttpMethod.Get, url, "application/json", "", listHeader, cancellationToken));
+
+								LogPayCodeMatch(agentCode, payCode, tmpPayCode, "PAID_SUCCESS", result);
+							}
+							else
+							{
+								LogPayCodeMatch(agentCode, payCode, tmpPayCode, "NOT_FOUND_OR_ALREADY_PAID");
 							}
 						}
-						
+						else
+						{
+							LogPayCodeMatch(agentCode, payCode, null, "INVALID_FORMAT_OR_AGENTCODE_NOT_MATCH");
+						}
 					}
 
-					
+
 				}
 				
 				
@@ -315,7 +326,34 @@ namespace API_VietQR.Services.VietQR
 			objResult.@object.reftransactionid = objAgentCallBack.RefTransactionId; 
 			return objResult;
 		}
-        public async Task<TransactionCallbackTest> TransactionTest(int agentId, TransactionTestRequest request, CancellationToken cancellationToken)
+		private void LogPayCodeMatch(string agentCode, string rawPayCode, string? extractedPayCode, string? status, object? result = null)
+		{
+			try
+			{
+				var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs", "PayCode");
+				Directory.CreateDirectory(logDirectory);
+
+				var logFile = Path.Combine(logDirectory, $"log_{DateTime.UtcNow:yyyyMMdd}.txt");
+
+				var logEntry = new StringBuilder();
+				logEntry.AppendLine($"=== [{DateTime.Now:yyyy-MM-dd HH:mm:ss}] PayCode Processing ===");
+				logEntry.AppendLine($"AgentCode      : {agentCode}");
+				logEntry.AppendLine($"Raw PayCode    : {rawPayCode}");
+				logEntry.AppendLine($"Extracted Code : {extractedPayCode ?? "(not matched)"}");
+				logEntry.AppendLine($"Status         : {status}");
+				if (result != null)
+					logEntry.AppendLine($"Result         : {JsonConvert.SerializeObject(result)}");
+				logEntry.AppendLine(new string('-', 60));
+
+				File.AppendAllText(logFile, logEntry.ToString());
+			}
+			catch (Exception ex)
+			{
+				
+			}
+		}
+
+		public async Task<TransactionCallbackTest> TransactionTest(int agentId, TransactionTestRequest request, CancellationToken cancellationToken)
         {
 			//string fullPath = AppDomain.CurrentDomain.BaseDirectory + "/LogRequest/Tran_Test_" + Guid.NewGuid() + ".txt";
 			//using (StreamWriter writer = new StreamWriter(fullPath))
