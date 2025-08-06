@@ -272,9 +272,9 @@ namespace API_VietQR.Services.VietQR
 					if (!String.IsNullOrEmpty(agentCode))
 					{
 						var parts = payCode.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-						if (parts.Length == 2 && parts[0].StartsWith(agentCode))
+						if (parts.Length == 2)
 						{
-							string tmpPayCode = parts[1];
+							string tmpPayCode = parts[1].Trim();
 
 							var objPayment = dbBooking.QueryFirstOrDefault<Agent_Payment_B2C>(
 								"select * from tbl_Agent_Payment_B2C where PayCode = @PayCode and AgentID = @AgentID",
